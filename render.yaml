@@ -7,10 +7,3 @@ services:
     envVars:
       - key: PYTHON_VERSION
         value: 3.12.3
-  
-  - type: cron
-    name: keep-alive-ping
-    env: python
-    schedule: "*/14 * * * *"
-    buildCommand: pip install requests
-    startCommand: python keep_alive.py

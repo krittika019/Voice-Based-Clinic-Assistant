@@ -96,6 +96,12 @@ async def root():
     }
 
 
+@app.get("/ping")
+async def ping():
+    """Minimal endpoint for cron keep-alive"""
+    return {"ok": 1}
+
+
 @app.get("/knowledge_base")
 async def get_knowledge_base():
     """Get the complete knowledge base for the voice agent"""
