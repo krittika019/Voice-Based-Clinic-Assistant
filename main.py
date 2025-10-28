@@ -12,7 +12,6 @@ import json
 
 app = FastAPI(title="Clinic Voice Agent Backend")
 
-# Enable CORS for frontend/voice agent communication
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -21,13 +20,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Data file paths
 KNOWLEDGE_BASE_FILE = "knowledge_base.json"
 SCHEDULES_FILE = "schedules.json"
 APPOINTMENTS_FILE = "appointments.json"
 
 
-# Utility functions
 def load_json(filename: str) -> dict | list:
     """Load JSON data from file"""
     try:
@@ -60,19 +57,16 @@ def generate_time_slots(start: str, end: str, interval: int = 30) -> List[str]:
 
 
 def get_day_date(day_name: str) -> datetime:
-    """
-    Get the next occurrence of the given day name
-    Used to filter appointments by day
-    """
+    """Get the next occurrence of the given day name"""
     days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
     today = datetime.now()
     target_day = days.index(day_name.capitalize())
     current_day = today.weekday()
     
     days_ahead = target_day - current_day
-    if days_ahead < 0:  # Target day already happened this week
+    if days_ahead < 0:
         days_ahead += 7
-    elif days_ahead == 0:  # Today
+    elif days_ahead == 0:
         days_ahead = 0
     
     return today + timedelta(days=days_ahead)
@@ -88,12 +82,10 @@ def is_time_in_range(time_str: str, start: datetime, end: datetime, date_obj: da
         microsecond=0
     )
     
-    # Check if slot starts during the appointment or if appointment starts during the slot
     slot_end = slot_datetime + timedelta(minutes=30)
     return (slot_datetime < end and slot_end > start)
 
 
-# API Endpoints
 @app.get("/")
 async def root():
     """Health check endpoint"""
@@ -122,19 +114,12 @@ async def get_schedules():
     return load_json(SCHEDULES_FILE)
 
 
-# ===== Main API Endpoints =====
-
 @app.get("/get_slots/{day}")
 async def get_slots(day: str):
-    """
-    Get available appointment slots for a specific day
-    Path param: day (e.g., /get_slots/Saturday)
-    Returns: Voice-friendly response with available slots
-    """
+    """Get available appointment slots for a specific day"""
     try:
         day = day.capitalize()
         
-        # Get available slots
         schedules = load_json(SCHEDULES_FILE)
         if day not in schedules:
             return {
@@ -146,10 +131,8 @@ async def get_slots(day: str):
         start_time = schedule["start_time"]
         end_time = schedule["end_time"]
         
-        # Generate all possible 30-minute slots
         all_slots = generate_time_slots(start_time, end_time, interval=30)
         
-        # Remove lunch break slots
         lunch_start = "13:00"
         lunch_end = "14:00"
         available_slots = [
@@ -157,11 +140,9 @@ async def get_slots(day: str):
             if not (lunch_start <= slot < lunch_end)
         ]
         
-        # Get the date for the requested day
         day_date = get_day_date(day)
         appointments = load_json(APPOINTMENTS_FILE)
         
-        # Filter out booked slots
         for appointment in appointments:
             appt_start = datetime.fromisoformat(appointment["start_time"])
             appt_end = datetime.fromisoformat(appointment["end_time"])
@@ -172,9 +153,8 @@ async def get_slots(day: str):
                     if not is_time_in_range(slot, appt_start, appt_end, day_date)
                 ]
         
-        # Format response for voice
         if available_slots:
-            slots_text = ", ".join(available_slots[:8])  # First 8 slots
+            slots_text = ", ".join(available_slots[:8])
             response = f"{doctor} is available on {day}. Here are some available time slots: {slots_text}. Which time works best for you?"
         else:
             response = f"I'm sorry, {doctor} is fully booked on {day}. Would you like to try another day?"
@@ -195,24 +175,18 @@ async def get_slots(day: str):
 
 @app.post("/log_booking")
 async def log_booking(request: dict):
-    """
-    Book an appointment
-    Expected input: {"name": "John", "doctor": "Dr. Sharma", "day": "Friday", "slot": "15:00"}
-    Returns: Voice-friendly confirmation response
-    """
+    """Book an appointment"""
     try:
         name = request.get("name", "").strip()
         doctor = request.get("doctor", "").strip()
         day = request.get("day", "").capitalize()
         slot = request.get("slot", "").strip()
         
-        # Validation
         if not all([name, doctor, day, slot]):
             return {
                 "response": "I need your name, the doctor, day, and time slot to book the appointment. Let's start over."
             }
         
-        # Validate the booking
         schedules = load_json(SCHEDULES_FILE)
         
         if day not in schedules:
@@ -225,7 +199,6 @@ async def log_booking(request: dict):
                 "response": f"{doctor} is not available on {day}. {schedules[day]['doctor']} is available that day."
             }
         
-        # Calculate appointment times
         day_date = get_day_date(day)
         slot_time = datetime.strptime(slot, "%H:%M")
         start_datetime = day_date.replace(
@@ -236,14 +209,12 @@ async def log_booking(request: dict):
         )
         end_datetime = start_datetime + timedelta(minutes=30)
         
-        # Create appointment entry
         appointment_entry = {
             "name": name,
             "start_time": start_datetime.isoformat(),
             "end_time": end_datetime.isoformat()
         }
         
-        # Log to console
         print("\n" + "="*60)
         print("NEW APPOINTMENT BOOKED")
         print("="*60)
@@ -255,12 +226,10 @@ async def log_booking(request: dict):
         print(f"Duration: 30 minutes")
         print("="*60 + "\n")
         
-        # Save to appointments.json
         appointments = load_json(APPOINTMENTS_FILE)
         appointments.append(appointment_entry)
         save_json(APPOINTMENTS_FILE, appointments)
         
-        # Format response for voice
         response = f"Perfect! I've booked your appointment with {doctor} on {day} at {slot}. Your appointment is confirmed for {start_datetime.strftime('%B %d')}. Is there anything else I can help you with?"
         
         return {

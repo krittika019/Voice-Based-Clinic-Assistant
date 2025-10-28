@@ -1,4 +1,4 @@
-# 🏥 Clinic Voice Agent
+# Clinic Voice Agent
 
 A voice-powered appointment booking system using **ElevenLabs Conversational AI** and **FastAPI**.
 
@@ -8,7 +8,7 @@ A voice-powered appointment booking system using **ElevenLabs Conversational AI*
 
 The agent communicates with a FastAPI backend that handles availability logic and logs appointment data.
 
-## � How It Works
+## How It Works
 
 ```
 User Voice → ElevenLabs AI → ngrok Tunnel → FastAPI Backend → JSON Data
@@ -33,8 +33,7 @@ User Voice → ElevenLabs AI → ngrok Tunnel → FastAPI Backend → JSON Data
 
 ---
 
-
-## 📄 License
+## License
 
 MIT License - Open source and free to use.
 
