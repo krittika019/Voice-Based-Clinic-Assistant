@@ -1,0 +1,32 @@
+{
+  "Monday": {
+    "doctor": "Dr. Nair",
+    "start_time": "09:00",
+    "end_time": "18:00"
+  },
+  "Tuesday": {
+    "doctor": "Dr. Sharma",
+    "start_time": "09:00",
+    "end_time": "18:00"
+  },
+  "Wednesday": {
+    "doctor": "Dr. Nair",
+    "start_time": "09:00",
+    "end_time": "18:00"
+  },
+  "Thursday": {
+    "doctor": "Dr. Sharma",
+    "start_time": "09:00",
+    "end_time": "18:00"
+  },
+  "Friday": {
+    "doctor": "Dr. Nair",
+    "start_time": "09:00",
+    "end_time": "18:00"
+  },
+  "Saturday": {
+    "doctor": "Dr. Sharma",
+    "start_time": "09:00",
+    "end_time": "18:00"
+  }
+}

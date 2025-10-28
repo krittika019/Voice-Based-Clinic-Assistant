@@ -1,0 +1,21 @@
+{
+  "clinic_hours": "Mon–Sat, 9 AM – 6 PM (Lunch Break: 1 PM – 2 PM)",
+  "doctors": {
+    "Dr. Mehra": {
+      "specialization": "Pediatrician"
+    },
+    "Dr. Patel": {
+      "specialization": "General Physician"
+    },
+    "Dr. Nair": {
+      "specialization": "Dentist"
+    },
+    "Dr. Sharma": {
+      "specialization": "Dentist"
+    }
+  },
+  "faq": {
+    "walk_in": "Yes, we accept walk-ins from 9 AM to 12 PM.",
+    "services": ["Pediatrics", "General Consultation", "Dental", "Blood Tests"]
+  }
+}
