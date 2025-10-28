@@ -113,6 +113,25 @@ async def get_today():
     }
 
 
+@app.delete("/appointments/clear")
+async def clear_all_appointments():
+    """Clear all appointments (admin only)"""
+    save_json(APPOINTMENTS_FILE, [])
+    return {"status": "success", "message": "All appointments cleared"}
+
+
+@app.delete("/appointments/{index}")
+async def delete_appointment(index: int):
+    """Delete a specific appointment by index"""
+    appointments = load_json(APPOINTMENTS_FILE)
+    if 0 <= index < len(appointments):
+        deleted = appointments.pop(index)
+        save_json(APPOINTMENTS_FILE, appointments)
+        return {"status": "success", "deleted": deleted}
+    else:
+        raise HTTPException(status_code=404, detail="Appointment not found")
+
+
 @app.get("/knowledge_base")
 async def get_knowledge_base():
     """Get the complete knowledge base for the voice agent"""
