@@ -102,6 +102,17 @@ async def ping():
     return {"ok": 1}
 
 
+@app.get("/today")
+async def get_today():
+    """Get current day and date"""
+    today = datetime.now()
+    return {
+        "day": today.strftime("%A"),
+        "date": today.strftime("%Y-%m-%d"),
+        "formatted_date": today.strftime("%B %d, %Y")
+    }
+
+
 @app.get("/knowledge_base")
 async def get_knowledge_base():
     """Get the complete knowledge base for the voice agent"""
@@ -160,8 +171,9 @@ async def get_slots(day: str):
                 ]
         
         if available_slots:
-            slots_text = ", ".join(available_slots[:8])
-            response = f"{doctor} is available on {day}. Here are some available time slots: {slots_text}. Which time works best for you?"
+            first_slot = available_slots[0]
+            last_slot = available_slots[-1]
+            response = f"{doctor} is available on {day} from {first_slot} to {last_slot}. What time would you like to book?"
         else:
             response = f"I'm sorry, {doctor} is fully booked on {day}. Would you like to try another day?"
         
@@ -236,7 +248,8 @@ async def log_booking(request: dict):
         appointments.append(appointment_entry)
         save_json(APPOINTMENTS_FILE, appointments)
         
-        response = f"Perfect! I've booked your appointment with {doctor} on {day} at {slot}. Your appointment is confirmed for {start_datetime.strftime('%B %d')}. Is there anything else I can help you with?"
+        formatted_date = start_datetime.strftime('%A, %B %d, %Y')
+        response = f"Perfect! I've booked your appointment with {doctor} on {formatted_date} at {slot}. Is there anything else I can help you with?"
         
         return {
             "response": response,
