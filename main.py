@@ -72,6 +72,20 @@ def get_day_date(day_name: str) -> datetime:
     return today + timedelta(days=days_ahead)
 
 
+def _ordinal(n: int) -> str:
+    """Return ordinal string for an integer (1 -> 1st, 2 -> 2nd, etc.)"""
+    if 10 <= (n % 100) <= 20:
+        suffix = 'th'
+    else:
+        suffix = {1: 'st', 2: 'nd', 3: 'rd'}.get(n % 10, 'th')
+    return f"{n}{suffix}"
+
+
+def format_date_ordinal(dt: datetime) -> str:
+    """Format a datetime as an ordinal day with short month and year, e.g. '4th Nov 2025'"""
+    return f"{_ordinal(dt.day)} {dt.strftime('%b')} {dt.year}"
+
+
 def is_time_in_range(time_str: str, start: datetime, end: datetime, date_obj: datetime) -> bool:
     """Check if a time slot overlaps with a booked appointment"""
     slot_time = datetime.strptime(time_str, "%H:%M")
@@ -225,19 +239,25 @@ async def log_booking(request: dict):
             }
         
         schedules = load_json(SCHEDULES_FILE)
-        
+
+        # Day and doctor basic checks
         if day not in schedules:
             return {
                 "response": f"Sorry, the clinic is closed on {day}. Please choose a weekday or Saturday."
             }
-        
+
         if schedules[day]["doctor"] != doctor:
             return {
                 "response": f"{doctor} is not available on {day}. {schedules[day]['doctor']} is available that day."
             }
-        
+
+        # Validate slot time format
+        try:
+            slot_time = datetime.strptime(slot, "%H:%M")
+        except ValueError:
+            return {"response": f"I couldn't understand the time '{slot}'. Please provide it in 24-hour format like 14:00."}
+
         day_date = get_day_date(day)
-        slot_time = datetime.strptime(slot, "%H:%M")
         start_datetime = day_date.replace(
             hour=slot_time.hour,
             minute=slot_time.minute,
@@ -245,13 +265,42 @@ async def log_booking(request: dict):
             microsecond=0
         )
         end_datetime = start_datetime + timedelta(minutes=30)
-        
+
+        # Check working hours and lunch break
+        work_start = datetime.strptime(schedules[day]["start_time"], "%H:%M").time()
+        work_end = datetime.strptime(schedules[day]["end_time"], "%H:%M").time()
+        slot_time_only = slot_time.time()
+
+        # Lunch block
+        lunch_start = datetime.strptime("13:00", "%H:%M").time()
+        lunch_end = datetime.strptime("14:00", "%H:%M").time()
+
+        # If slot starts before or at work_start or ends after work_end -> outside hours
+        slot_end_time = (datetime.combine(day_date.date(), slot_time_only) + timedelta(minutes=30)).time()
+
+        if not (work_start <= slot_time_only < work_end) or not (work_start < slot_end_time <= work_end):
+            return {"response": f"Sorry, {doctor} is not available at {slot} on {day} — that's outside of working hours ({schedules[day]['start_time']}–{schedules[day]['end_time']}). Would you like another time?"}
+
+        if (lunch_start <= slot_time_only < lunch_end) or (lunch_start < slot_end_time <= lunch_end):
+            return {"response": f"Sorry, {doctor} is not available at {slot} on {day} — that falls during our lunch break (13:00–14:00). Would you like a time before or after lunch?"}
+
+        # Check for conflicts with existing appointments
+        appointments = load_json(APPOINTMENTS_FILE)
+        for appointment in appointments:
+            appt_start = datetime.fromisoformat(appointment["start_time"])
+            appt_end = datetime.fromisoformat(appointment["end_time"])
+            if appt_start.date() == day_date.date():
+                # overlap check
+                if not (end_datetime <= appt_start or start_datetime >= appt_end):
+                    return {"response": f"Sorry, {doctor} already has an appointment at {slot} on {day} (the 30-minute slot is taken). Would you like a different time?"}
+
+        # All good — create appointment
         appointment_entry = {
             "name": name,
             "start_time": start_datetime.isoformat(),
             "end_time": end_datetime.isoformat()
         }
-        
+
         print("\n" + "="*60)
         print("NEW APPOINTMENT BOOKED")
         print("="*60)
@@ -262,14 +311,12 @@ async def log_booking(request: dict):
         print(f"Date: {start_datetime.strftime('%Y-%m-%d')}")
         print(f"Duration: 30 minutes")
         print("="*60 + "\n")
-        
-        appointments = load_json(APPOINTMENTS_FILE)
+
         appointments.append(appointment_entry)
         save_json(APPOINTMENTS_FILE, appointments)
-        
-        formatted_date = start_datetime.strftime('%A, %B %d, %Y')
+        formatted_date = format_date_ordinal(start_datetime)
         response = f"Perfect! I've booked your appointment with {doctor} on {formatted_date} at {slot}. Is there anything else I can help you with?"
-        
+
         return {
             "response": response,
             "status": "success",
